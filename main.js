@@ -1,5 +1,9 @@
 Office.onReady(() => {
-    // Wird aufgerufen, wenn Office bereit ist
+    // Office ist bereit
+    // Globale Registrierung für Event-Handler (wichtig!)
+    if (typeof globalThis !== "undefined") {
+        globalThis.onDocumentOpen = onDocumentOpen;
+    }
 });
 
 async function onDocumentOpen(event) {
@@ -7,26 +11,48 @@ async function onDocumentOpen(event) {
         const userInfo = await getUserInfo();
 
         await Word.run(async (context) => {
-            const body = context.document.body;
-            body.search("<<Vorname>>", { matchCase: false }).items[0].insertText(userInfo.givenName, "Replace");
-            body.search("<<Nachname>>", { matchCase: false }).items[0].insertText(userInfo.surname, "Replace");
-            body.search("<<Titel>>", { matchCase: false }).items[0].insertText(userInfo.jobTitle || "", "Replace");
-            body.search("<<Mail>>", { matchCase: false }).items[0].insertText(userInfo.mail, "Replace");
-            body.search("<<Mobil>>", { matchCase: false }).items[0].insertText(userInfo.mobilePhone || "", "Replace");
-            await context.sync();
+            // Platzhalter und ihre Werte
+            const replacements = [
+                { placeholder: "<<Vorname>>",  value: userInfo.givenName    || "" },
+                { placeholder: "<<Nachname>>",  value: userInfo.surname      || "" },
+                { placeholder: "<<Titel>>",     value: userInfo.jobTitle     || "" },
+                { placeholder: "<<Mail>>",      value: userInfo.mail         || "" },
+                { placeholder: "<<Mobil>>",     value: userInfo.mobilePhone  || "" },
+            ];
+
+            for (const { placeholder, value } of replacements) {
+                // ✅ Erst laden, dann sync, dann auf .items zugreifen
+                const results = context.document.body.search(placeholder, { matchCase: false });
+                results.load("items");
+                await context.sync();
+
+                for (const result of results.items) {
+                    result.insertText(value, "Replace");
+                }
+
+                // ✅ Ersetzungen für diesen Platzhalter übernehmen
+                await context.sync();
+            }
         });
 
-        event.completed();
     } catch (error) {
-        console.error(error);
+        console.error("Fehler in onDocumentOpen:", error);
+    } finally {
+        // ✅ event.completed() IMMER aufrufen – auch im Fehlerfall
         event.completed();
     }
 }
 
 async function getUserInfo() {
     const token = await Office.auth.getAccessToken({ allowSignInPrompt: true });
+
     const response = await fetch("https://graph.microsoft.com/v1.0/me", {
         headers: { Authorization: `Bearer ${token}` }
     });
+
+    if (!response.ok) {
+        throw new Error(`Graph API Fehler: ${response.status} ${response.statusText}`);
+    }
+
     return await response.json();
 }
