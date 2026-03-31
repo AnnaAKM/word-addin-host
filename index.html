@@ -1,11 +1,18 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
 <head>
+    <meta charset="UTF-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
     <title>Word AutoFill Add-In</title>
+
+    <!-- ✅ office.js MUSS zuerst und ohne defer geladen werden -->
     <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
-    <script src="main.js"></script>
+
+    <!-- ✅ Eigenes Script erst danach, mit defer -->
+    <script defer src="main.js"></script>
 </head>
 <body>
-    <h3>Word AutoFill Add-In läuft im Hintergrund...</h3>
+    <!-- ✅ Minimales UI – das Taskpane bleibt im Hintergrund -->
+    <p>Word AutoFill Add-In läuft im Hintergrund...</p>
 </body>
 </html>
